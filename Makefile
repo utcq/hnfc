@@ -9,4 +9,4 @@ flash:
 
 
 read:
-	screen /dev/ttyACM0 9600
+	minicom -D /dev/ttyACM0 -b 9600

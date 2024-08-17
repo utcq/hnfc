@@ -4,20 +4,16 @@
 /* 
   PINOUT:
     3.3V -> VCC
-    RST  -> A0
+    RST  -> D5
     GND  -> GND
-    IRQ  -> A1
-    MISO -> A5
-    MOSI -> A3
-    SCL  -> A4
-    SDA  -> A2
+    IRQ  -> NONE
+    MISO -> D12
+    MOSI -> D11
+    SCL  -> D13
+    SDA  -> D10
 */
-#define RST A0
-#define IRQ A1
-#define MISO A5
-#define MOSI A3
-#define SCL A4
-#define SDA A2
+#define SS_PIN 10
+#define RST_PIN 5
 
 #define BAUD_RATE 9600
 
