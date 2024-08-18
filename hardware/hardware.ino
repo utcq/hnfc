@@ -24,16 +24,6 @@ bool isPresent() {
   return mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial();
 }
 
-void read_cmd() {
-  WAIT();
-  byte sector = Serial.read();
-
-  WAIT();
-  byte block = Serial.read();
-
-  readBlock(sector, block);
-}
-
 void parse_command() {
   byte cmd = Serial.read();
 
@@ -45,9 +35,23 @@ void parse_command() {
       break;
     }
 
-    case COMM_READ:
-      read_cmd();
+    case COMM_READ: {
+      WAIT();
+      byte sector = Serial.read();
+      WAIT();
+      byte block = Serial.read();
+
+      readBlock(sector, block);
       break;
+    }
+
+    case COMM_READ_SECTOR: {
+      WAIT();
+      byte sector = Serial.read();
+      
+      readSector(sector);
+      break;
+    }
     
     default: {
       break;
@@ -63,7 +67,9 @@ void loop() {
   Serial.write(mfrc522.uid.size);
   Serial.write(mfrc522.uid.uidByte, mfrc522.uid.size);
 
-  WAIT();
+  while (Serial.available() <= 0) {
+    PRESENCE();
+  }
   byte prefix = Serial.read();
   switch (prefix) {
     case COMM_PREFIX: {

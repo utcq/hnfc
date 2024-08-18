@@ -7,6 +7,7 @@ class COMMANDS_ENUM:
   PREFIX = 0x54
   FULL_READ = 0x51
   READ = 0x52
+  READ_SEC = 0x53
 
 class Interface():
   def __init__(self, board):
@@ -26,40 +27,55 @@ class Interface():
     uid_size = board.read(1)
     self.uid = board.read(int.from_bytes(uid_size, byteorder='big'))
     return self.uid
+
+  def hextobin(self, hexdump: list) -> bytes:
+    if "--" in hexdump:
+      print("[Warning] Block key not found! Returning None")
+      return None
+    return bytes([int(i, 16) for i in hexdump])
   
-  def read_full(self):
+  def read_full(self) -> list[list[bytes]]:
     self.check()
     self.board.write(bytes([COMMANDS_ENUM.PREFIX, COMMANDS_ENUM.FULL_READ]))
+    self.board.read(8) # Skip first 8 bytes of sent data
     dump = []
-    for _ in range(16*4): # Sectors * Blocks
-      dump.extend(self.board.readline().decode('utf-8').strip().split(" "))
+    for _ in range(16): # Sectors * Blocks
+      sector = []
+      for _ in range(4):
+        line = self.board.readline()
+        hexd = line.decode('utf-8').strip().split(" ")
+        sector.append( self.hextobin(hexd) )
+      dump.append(sector)
     return dump
-
-  def stripToHex(self, data: bytes):
-    # While first byte of data is not a hex character, remove it
-    new = bytes()
-    for i in data:
-      if i.isalnum():
-        new += i.encode('utf-8')
   
-  def read(self, sector: int, block: int):
+  def read(self, sector: int, block: int) -> bytes:
     self.check()
     self.board.write(bytes([COMMANDS_ENUM.PREFIX, COMMANDS_ENUM.READ, sector, block]))
+    self.board.read(8)
     line = self.board.readline()
-    line = self.stripToHex(line)
-    print(line)
-    return line.decode('utf-8').strip().split(" ")
+    hexd = line.decode('utf-8').strip().split(" ")
+    return self.hextobin(hexd)
   
-  def read_sector(self, sector: int):
-    for block in range(4):
-      yield self.read(sector, block)
+  def read_sector(self, sector: int) -> list[bytes]:
+    self.check()
+    self.board.write(bytes([COMMANDS_ENUM.PREFIX, COMMANDS_ENUM.READ_SEC, sector]))
+    self.board.read(8)
+    dump = []
+    for _ in range(4):
+      line = self.board.readline()
+      hexd = line.decode('utf-8').strip().split(" ")
+      dump.append( self.hextobin(hexd) )
+    return dump
 
 def main():
   iface = Interface(board)
   print("UID: ", iface.wait_for_card().hex())
-  print ("Reading sector 4")
-  for block in iface.read_sector(4):
-    print(block)
+  print ("Dumping all sectors")
+  for i, sector in enumerate(iface.read_full()):
+    print("Sector {}".format(i))
+    for j,block in enumerate(sector):
+      if block:
+        print(" Block {}: {}".format(j, block.hex(sep=' ')))
 
 if __name__ == '__main__':
   main()

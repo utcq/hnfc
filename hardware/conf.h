@@ -20,5 +20,6 @@
 #define COMM_PREFIX 0x54
 #define COMM_FULL_READ 0x51
 #define COMM_READ 0x52
+#define COMM_READ_SECTOR 0x53
 
 #endif
