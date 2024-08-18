@@ -21,5 +21,7 @@
 #define COMM_FULL_READ 0x51
 #define COMM_READ 0x52
 #define COMM_READ_SECTOR 0x53
+#define COMM_WRITE_SECTOR 0x54
+#define COMM_WRITE 0x55
 
 #endif

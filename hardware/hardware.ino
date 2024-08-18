@@ -52,6 +52,22 @@ void parse_command() {
       readSector(sector);
       break;
     }
+
+    case COMM_WRITE_SECTOR: {
+      WAIT();
+      byte sector = Serial.read();
+      
+      WAIT();
+      // Expected 64 bytes
+      byte data[64];
+      for (int i = 0; i < 64; i++) {
+        data[i] = Serial.read();
+      }
+
+      byte block = 0;
+      
+
+    }
     
     default: {
       break;
@@ -62,7 +78,7 @@ void parse_command() {
 void loop() {
   PRESENCE();
   delay(1500);
-
+  
   Serial.write("\x60\x10", 2);
   Serial.write(mfrc522.uid.size);
   Serial.write(mfrc522.uid.uidByte, mfrc522.uid.size);
@@ -85,13 +101,24 @@ void loop() {
   mfrc522.PCD_StopCrypto1();
 }
 
+bool readBlockWithRetry(int sector, int block, int retries = 3) {
+  for (int attempt = 0; attempt < retries; attempt++) {
+    if (readBlock(sector, block)) {
+      return true;
+    }
+    delay(50);
+  }
+  return false;
+}
+
 void readSector(int sector) {
   for (int block = 0; block < 4; block++) {
-    readBlock(sector, block);
+    readBlockWithRetry(sector, block);
+    delay(100);
   }
 }
 
-void readBlock(int sector, int block) {
+bool readBlock(int sector, int block) {
   byte readData[18];
   int absoluteBlock = sector * 4 + block;
 
@@ -100,10 +127,17 @@ void readBlock(int sector, int block) {
       Serial.print(readData[i] < 0x10 ? " 0" : " ");
       Serial.print(readData[i], HEX);
     }
+    Serial.println();
+    return true;
   } else {
     Serial.print("-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --");
+    Serial.println();
+    return false;
   }
-  Serial.println();
+}
+
+void writeBlock(int sector, int block) {
+  return;
 }
 
 bool dictionaryAttack(byte block, byte *buffer) {

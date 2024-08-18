@@ -8,6 +8,8 @@ class COMMANDS_ENUM:
   FULL_READ = 0x51
   READ = 0x52
   READ_SEC = 0x53
+  WRITE_SEC = 0x54
+  WRITE = 0x55
 
 class Interface():
   def __init__(self, board):
@@ -20,6 +22,7 @@ class Interface():
       raise Exception('Board disconnected')
   
   def wait_for_card(self) -> int:
+    print("Waiting for card...")
     while self.board.isOpen():
       r = board.read(2)
       if r and r == b"\x60\x10":
@@ -29,6 +32,7 @@ class Interface():
     return self.uid
 
   def hextobin(self, hexdump: list) -> bytes:
+    hexdump = list(filter(lambda x: x != "", hexdump))
     if "--" in hexdump:
       print("[Warning] Block key not found! Returning None")
       return None
@@ -66,6 +70,15 @@ class Interface():
       hexd = line.decode('utf-8').strip().split(" ")
       dump.append( self.hextobin(hexd) )
     return dump
+
+  def write_sector(self, sector: int, data: list[bytes]):
+    assert len(data) == 4, "Data must have 4 blocks"
+    assert all([len(i) == 16 for i in data]), "All blocks must have 16 bytes"
+    self.check()
+    self.board.write(bytes([COMMANDS_ENUM.PREFIX, COMMANDS_ENUM.WRITE_SEC, sector]))
+    self.board.read(8)
+    self.board.write(b''.join(data))
+
 
 def main():
   iface = Interface(board)
