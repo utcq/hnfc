@@ -17,4 +17,8 @@
 
 #define BAUD_RATE 9600
 
+#define COMM_PREFIX 0x54
+#define COMM_FULL_READ 0x51
+#define COMM_READ 0x52
+
 #endif

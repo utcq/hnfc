@@ -3,6 +3,7 @@
 #include "conf.h"
 
 #define PRESENCE() if (!isPresent()) {return;}
+#define WAIT() while (Serial.available() <= 0) { PRESENCE(); }
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 
@@ -23,32 +24,65 @@ bool isPresent() {
   return mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial();
 }
 
+void read_cmd() {
+  WAIT();
+  byte sector = Serial.read();
+
+  WAIT();
+  byte block = Serial.read();
+
+  readBlock(sector, block);
+}
+
+void parse_command() {
+  byte cmd = Serial.read();
+
+  switch (cmd) {
+    case COMM_FULL_READ: {
+      for (int sector = 0; sector < 16; sector++) {
+        readSector(sector);
+      }
+      break;
+    }
+
+    case COMM_READ:
+      read_cmd();
+      break;
+    
+    default: {
+      break;
+    }
+  }
+}
+
 void loop() {
   PRESENCE();
   delay(1500);
 
   Serial.write("\x60\x10", 2);
-
   Serial.write(mfrc522.uid.size);
   Serial.write(mfrc522.uid.uidByte, mfrc522.uid.size);
 
-  /*for (int sector = 0; sector < 16; sector++) {
-    readSector(sector);
-  }*/
+  WAIT();
+  byte prefix = Serial.read();
+  switch (prefix) {
+    case COMM_PREFIX: {
+      parse_command();
+      break;
+    }
+    default: {
+      break;
+    }
+  }
 
   mfrc522.PICC_HaltA();
   mfrc522.PCD_StopCrypto1();
 }
 
 void readSector(int sector) {
-  Serial.print(F("Sector "));
-  Serial.print(sector);
-  Serial.println(F(":"));
-
   for (int block = 0; block < 4; block++) {
     readBlock(sector, block);
   }
-  Serial.println();
 }
 
 void readBlock(int sector, int block) {
@@ -56,20 +90,14 @@ void readBlock(int sector, int block) {
   int absoluteBlock = sector * 4 + block;
 
   if (dictionaryAttack(absoluteBlock, readData)) {
-    Serial.print(F("Block "));
-    Serial.print(block);
-    Serial.print(F(": "));
-
     for (byte i = 0; i < 16; i++) {
       Serial.print(readData[i] < 0x10 ? " 0" : " ");
       Serial.print(readData[i], HEX);
     }
-    Serial.println();
   } else {
-    Serial.print(F("Block "));
-    Serial.print(block);
-    Serial.println(F(": Failed to find the correct key"));
+    Serial.print("-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --");
   }
+  Serial.println();
 }
 
 bool dictionaryAttack(byte block, byte *buffer) {
